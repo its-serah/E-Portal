@@ -165,3 +165,4 @@ tttt/
 - Face recognition accuracy depends on image quality
 - Local storage of face images - consider cloud storage for production
 - SQLite database - consider PostgreSQL/MongoDB for production
+# GitHub Actions Deployment Ready
