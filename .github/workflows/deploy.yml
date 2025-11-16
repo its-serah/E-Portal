@@ -11,10 +11,14 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       
-      - name: Install Railway CLI
-        run: npm install -g @railway/cli
+      - name: Run tests
+        run: python -m py_compile main.py
       
-      - name: Deploy to Railway
-        run: railway up
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      - name: Notify deployment ready
+        run: echo "✓ Code pushed and ready for Railway deployment"
+      
+      - name: Deploy to Railway (via GitHub integration)
+        uses: railwayapp/deploy-action@v1
+        with:
+          token: ${{ secrets.RAILWAY_TOKEN }}
+          service: api
