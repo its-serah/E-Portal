@@ -37,5 +37,4 @@ media
 
 # System Files
 .DS_Store
-Thumbs.db*.pt
-shape_predictor_68_face_landmarks.dat
+Thumbs.db

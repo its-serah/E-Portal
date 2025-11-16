@@ -1,9 +1,43 @@
+"""
+FastAPI Face Recognition System
+Main application entry point
+"""
+
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 
-app = FastAPI(title="E-Portal API", version="1.0.0")
+from config import settings
+from database import init_db
+from routes.auth import router as auth_router
+from routes.faces import router as faces_router
+from routes.frontend import router as frontend_router
+from routes.visits import router as visits_router
 
-# Add CORS
+# Initialize database
+init_db()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage app lifespan - startup and shutdown."""
+    # Startup
+    print("🚀 Starting Face Recognition API")
+    yield
+    # Shutdown
+    print("🛑 Shutting down Face Recognition API")
+
+
+# Create FastAPI app
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    description="Face recognition and detection API using YOLO and DeepFace",
+    version="1.0.0",
+    lifespan=lifespan
+)
+
+# Add CORS middleware for cross-origin requests
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -12,93 +46,46 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# In-memory storage
-faces = []
-users = []
-visits = []
+# Include routers
+app.include_router(frontend_router)  # Frontend pages
+app.include_router(auth_router)  # Auth API
+app.include_router(faces_router)  # Face detection API
+app.include_router(visits_router)  # Visit tracking API
+
+# Serve static files
+try:
+    app.mount("/static", StaticFiles(directory="static"), name="static")
+except Exception:
+    pass
+
+# Serve media files
+try:
+    app.mount("/media", StaticFiles(directory="media"), name="media")
+except Exception:
+    pass
+
 
 @app.get("/")
-def root():
+async def root():
+    """Root endpoint."""
     return {
-        "message": "Welcome to E-Portal",
-        "version": "1.0.0",
-        "endpoints": {
-            "faces": "/api/faces",
-            "users": "/api/users",
-            "visits": "/api/visits",
-            "docs": "/docs"
-        }
+        "message": "Welcome to Face Recognition API",
+        "docs": "/docs",
+        "version": "1.0.0"
     }
+
 
 @app.get("/health")
-def health():
+async def health():
+    """Health check endpoint."""
     return {"status": "healthy"}
 
-# FACES ENDPOINTS
-@app.get("/api/faces")
-def get_faces():
-    return {"faces": faces, "count": len(faces)}
-
-@app.post("/api/faces")
-def add_face(name: str, description: str = ""):
-    face = {
-        "id": len(faces) + 1,
-        "name": name,
-        "description": description
-    }
-    faces.append(face)
-    return {"status": "success", "face": face}
-
-@app.get("/api/faces/{face_id}")
-def get_face(face_id: int):
-    for face in faces:
-        if face["id"] == face_id:
-            return face
-    return {"error": "Face not found"}
-
-@app.delete("/api/faces/{face_id}")
-def delete_face(face_id: int):
-    global faces
-    faces = [f for f in faces if f["id"] != face_id]
-    return {"status": "deleted"}
-
-# USERS ENDPOINTS
-@app.get("/api/users")
-def get_users():
-    return {"users": users, "count": len(users)}
-
-@app.post("/api/users")
-def add_user(username: str, email: str):
-    user = {
-        "id": len(users) + 1,
-        "username": username,
-        "email": email
-    }
-    users.append(user)
-    return {"status": "success", "user": user}
-
-@app.get("/api/users/{user_id}")
-def get_user(user_id: int):
-    for user in users:
-        if user["id"] == user_id:
-            return user
-    return {"error": "User not found"}
-
-# VISITS ENDPOINTS
-@app.get("/api/visits")
-def get_visits():
-    return {"visits": visits, "count": len(visits)}
-
-@app.post("/api/visits")
-def add_visit(user_id: int, face_id: int):
-    visit = {
-        "id": len(visits) + 1,
-        "user_id": user_id,
-        "face_id": face_id
-    }
-    visits.append(visit)
-    return {"status": "success", "visit": visit}
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=settings.DEBUG
+    )
